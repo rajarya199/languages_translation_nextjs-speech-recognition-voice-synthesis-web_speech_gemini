@@ -1,6 +1,12 @@
 "use client"
 import React,{useState,useEffect,useRef} from 'react'
 import { MicIcon, StopCircleIcon, PlayIcon, LanguagesIcon } from 'lucide-react'
+import { default as languageCodesData } from '@/data/language-codes.json';
+import { default as countryCodesData } from '@/data/country-codes.json';
+
+const languageCodes: Record<string, string> = languageCodesData;
+const countryCodes: Record<string, string> = countryCodesData;
+
 
 const Translator = () => {
 
@@ -8,11 +14,29 @@ const Translator = () => {
     const [isRecording, setIsRecording] = useState(false)
     const[translation,setTranslation]=useState<string>('')
     const [voices, setVoices] = useState<Array<SpeechSynthesisVoice>>();
-    
+    const [language, setLanguage] = useState<string>('pt-BR');
+    const [sourceLanguage, setSourceLanguage] = useState<string>('en-US')
+
+    const availableLanguages = Array.from(new Set(voices?.map(({ lang }) => lang)))
+    .map(lang => {
+      const split = lang.split('-');
+      const languageCode: string = split[0];
+      const countryCode: string = split[1];
+      return {
+        lang,
+        label: languageCodes[languageCode] || lang,
+        dialect: countryCodes[countryCode]
+      }
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+    const activeLanguage = availableLanguages.find(({ lang }) => language === lang);
+
+
 // console.log("voices",voices)
     const[text,setText]=useState<string>()
      const isSpeechDetected=false
-     const language="pt-BR"
+    
      const availableVoices = voices?.filter(({ lang }) => lang === language);
      const activeVoice =
        availableVoices?.find(({ name }) => name.includes('Google'))
@@ -67,7 +91,7 @@ const Translator = () => {
             },
             body: JSON.stringify({
               text: transcript,
-              language: "pt-BR", 
+              language 
             }),
           });
   
@@ -123,7 +147,18 @@ const Translator = () => {
             >
               Source Language
             </label>
-           
+            <select
+              id="sourceLanguage"
+              value={sourceLanguage}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              disabled={isRecording}
+            >
+            
+                <option  value={sourceLanguage}>
+                 English {sourceLanguage}
+                </option>
+        
+            </select>
           </div>
           <div className="flex-1">
             <label
@@ -132,6 +167,22 @@ const Translator = () => {
             >
               Target Language
             </label>
+            <select
+              id="language"
+              name='language'
+              value={language}
+              onChange={(e)=>{setLanguage(e.currentTarget.value)}}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              disabled={isRecording}
+            >
+               {availableLanguages.map(({ lang, label }) => {
+                    return (
+                      <option key={lang} value={lang}>
+                        { label } ({ lang })
+                      </option>
+                    )
+                  })}
+              </select>
          
           </div>
         </div>
@@ -169,6 +220,19 @@ const Translator = () => {
         {translation}
           </div>
         </div>
+            {/* Play Translation Button */}
+            {translation && (
+          <div className="flex justify-center">
+            <button
+              onClick={()=>{speak(translation)}}
+              className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white py-2 px-4 rounded-lg shadow transition-colors"
+              aria-label="Play translation"
+            >
+              <PlayIcon className="h-5 w-5" />
+              <span>Play Translation</span>
+            </button>
+          </div>
+        )}
       
       </div>
 
