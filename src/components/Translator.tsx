@@ -4,18 +4,52 @@ import { MicIcon, StopCircleIcon, PlayIcon, LanguagesIcon } from 'lucide-react'
 
 const Translator = () => {
     const [isRecording, setIsRecording] = useState(false)
+    const[translation,setTranslation]=useState<string>('')
     const[text,setText]=useState<string>()
      const isSpeechDetected=false
      const language="en-US"
     function handleOnRecord() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech Recognition is not supported in this browser.");
+        return;
+      }
       const recognition = new SpeechRecognition();
       recognition.onresult = async function(event) {
         const transcript = event.results[0][0].transcript;
         console.log('transcript', transcript)
-        setText(transcript)
+        setText(transcript);
+
         console.log("text",transcript)
+        try {
+          const response = await fetch("/api/translate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              text: transcript,
+              language: "pt-BR", 
+            }),
+          });
+  
+          const data = await response.json();
+          setTranslation(data.text);
+        } catch (err) {
+          console.error("Translation failed:", err);
+          setTranslation("Translation failed. Please try again.");
+        }
+     
+        
       }
+      recognition.onerror = function (event: any) {
+        console.error("Speech recognition error:", event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
       recognition.start();
     }
   return (
@@ -48,6 +82,7 @@ const Translator = () => {
             onClick={handleOnRecord}
             className={`flex items-center justify-center rounded-full w-16 h-16 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white shadow-lg transition-all`}
             aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+
           >
             {isRecording ? (
               <StopCircleIcon className="h-8 w-8" />
@@ -72,7 +107,7 @@ const Translator = () => {
             Translation
           </h2>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 min-h-[100px] border border-gray-200 dark:border-gray-600 transition-colors">
-        
+        {translation}
           </div>
         </div>
       
