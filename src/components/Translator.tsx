@@ -1,21 +1,59 @@
 "use client"
-import React,{useState,useEffect} from 'react'
+import React,{useState,useEffect,useRef} from 'react'
 import { MicIcon, StopCircleIcon, PlayIcon, LanguagesIcon } from 'lucide-react'
 
 const Translator = () => {
+
+  const recognitionRef=useRef<SpeechRecognition | null>(null)
     const [isRecording, setIsRecording] = useState(false)
     const[translation,setTranslation]=useState<string>('')
+    const [voices, setVoices] = useState<Array<SpeechSynthesisVoice>>();
+    
+// console.log("voices",voices)
     const[text,setText]=useState<string>()
      const isSpeechDetected=false
-     const language="en-US"
+     const language="pt-BR"
+     const availableVoices = voices?.filter(({ lang }) => lang === language);
+     const activeVoice =
+       availableVoices?.find(({ name }) => name.includes('Google'))
+       || availableVoices?.find(({ name }) => name.includes('Luciana'))
+       || availableVoices?.[0];
+       console.log(activeVoice)
+     useEffect(()=>{
+      const voices=window.speechSynthesis.getVoices()
+      if ( Array.isArray(voices) && voices.length > 0 ) {
+        setVoices(voices);
+        return;
+      }
+      if ( 'onvoiceschanged' in window.speechSynthesis ) {
+        window.speechSynthesis.onvoiceschanged = function() {
+          const voices = window.speechSynthesis.getVoices();
+          setVoices(voices);
+        }
+      }
+     },[])
     function handleOnRecord() {
+
+      if(isRecording){
+        recognitionRef.current?.stop();
+        setIsRecording(false);
+        return;
+      }
+      speak(' ')
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         alert("Speech Recognition is not supported in this browser.");
         return;
       }
-      const recognition = new SpeechRecognition();
-      recognition.onresult = async function(event) {
+       recognitionRef.current = new SpeechRecognition();
+
+       recognitionRef.current.onstart=function(){
+        setIsRecording(true)
+       }
+       recognitionRef.current.onend=function(){
+       setIsRecording(false)
+       }
+      recognitionRef.current.onresult = async function(event) {
         const transcript = event.results[0][0].transcript;
         console.log('transcript', transcript)
         setText(transcript);
@@ -35,6 +73,8 @@ const Translator = () => {
   
           const data = await response.json();
           setTranslation(data.text);
+        speak(data.text)
+
         } catch (err) {
           console.error("Translation failed:", err);
           setTranslation("Translation failed. Please try again.");
@@ -42,16 +82,35 @@ const Translator = () => {
      
         
       }
-      recognition.onerror = function (event: any) {
+      recognitionRef.current.onerror = function (event: any) {
         console.error("Speech recognition error:", event.error);
         setIsRecording(false);
       };
 
-      recognition.onend = () => {
+      recognitionRef.current.onend = () => {
         setIsRecording(false);
       };
-      recognition.start();
+      recognitionRef.current.start();
     }
+
+    function speak(text: string) {
+      if (!text) return;
+    
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language;
+    
+      if (activeVoice) {
+        utterance.voice = activeVoice;
+      }
+    
+      // Cancel any ongoing speech and wait a moment before speaking
+      window.speechSynthesis.cancel();
+    
+      setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+      }, 250); // Delay ensures cancellation is processed before speaking
+    }
+    
   return (
     <div>
   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-colors">
