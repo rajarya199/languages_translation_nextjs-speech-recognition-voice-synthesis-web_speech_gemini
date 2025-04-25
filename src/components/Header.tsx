@@ -1,12 +1,13 @@
 import React from 'react'
+import ThemeSwitcher from './ThemeSwitcher'
 import { LanguagesIcon } from 'lucide-react'
 const Header = () => {
   return (
-    <header className="text-center mb-8">
+    <header className="text-center mb-8 ">
     <div className="flex items-center justify-center mb-3 relative">
-      {/* <div className="absolute right-0">
-        <ThemeToggle />
-      </div> */}
+      <div className="absolute right-0">
+        <ThemeSwitcher />
+      </div>
       <LanguagesIcon className="h-8 w-8 text-blue-500 dark:text-blue-400 mr-2" />
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
         Voice Translator
